@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Goal {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("ACTIVE")
+  startDate   DateTime?
+  targetDate  DateTime?
+  tasks       Task[]
+  reviews     Review[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([targetDate])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  goalId      String
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  phase       String?
+  status      String    @default("TODO")
+  priority    String    @default("MEDIUM")
+  dueDate     DateTime?
+  estimatedHours Float?
+  completedAt DateTime?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([goalId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  goalId      String?
+  goal        Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  type        String   @default("GOAL_WEEKLY")
+  periodStart DateTime
+  periodEnd   DateTime
+  summary     String
+  wins        String?
+  blockers    String?
+  nextActions String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([goalId])
+  @@index([type])
+  @@index([periodStart, periodEnd])
+}
