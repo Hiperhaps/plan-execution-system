@@ -24,6 +24,7 @@ const githubClientSecret = firstPresentEnv(
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   secret: firstPresentEnv("AUTH_SECRET", "NEXTAUTH_SECRET"),
+  debug: false,
   providers: [
     GitHub({
       clientId: githubClientId,
@@ -43,6 +44,14 @@ export const authOptions: NextAuthOptions = {
       }
 
       return session;
+    },
+  },
+  logger: {
+    error(code) {
+      console.error(`[next-auth][error] ${code}`);
+    },
+    warn(code) {
+      console.warn(`[next-auth][warn] ${code}`);
     },
   },
 };
