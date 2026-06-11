@@ -3,14 +3,31 @@ import GitHub from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 
+function firstPresentEnv(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+const githubClientId = firstPresentEnv("AUTH_GITHUB_ID", "GITHUB_ID");
+const githubClientSecret = firstPresentEnv(
+  "AUTH_GITHUB_SECRET",
+  "GITHUB_SECRET",
+);
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  secret: firstPresentEnv("AUTH_SECRET", "NEXTAUTH_SECRET"),
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_ID ?? process.env.AUTH_GITHUB_ID ?? "",
-      clientSecret:
-        process.env.GITHUB_SECRET ?? process.env.AUTH_GITHUB_SECRET ?? "",
+      clientId: githubClientId,
+      clientSecret: githubClientSecret,
     }),
   ],
   session: {

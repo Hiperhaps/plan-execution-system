@@ -15,9 +15,14 @@ export function GitHubSignInButton({ callbackUrl }: GitHubSignInButtonProps) {
       type="button"
       className="btn-primary login-button"
       disabled={isPending}
-      onClick={() => {
+      onClick={async () => {
         setIsPending(true);
-        void signIn("github", { callbackUrl });
+
+        try {
+          await signIn("github", { callbackUrl });
+        } finally {
+          setIsPending(false);
+        }
       }}
     >
       {isPending ? "正在跳转..." : "使用 GitHub 登录"}
