@@ -72,6 +72,10 @@ export function AppFrame({
 
   const copy = shellCopy[preferences.language] ?? shellCopy["zh-CN"];
 
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   return (
     <div className="admin-frame">
       <aside className="admin-sidebar">
