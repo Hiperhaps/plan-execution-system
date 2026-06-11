@@ -64,8 +64,8 @@ model VerificationToken {
 
 model Goal {
   id          String    @id @default(cuid())
-  userId      String?
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String?
   status      String    @default("ACTIVE")
@@ -85,8 +85,8 @@ model Goal {
 
 model Task {
   id             String    @id @default(cuid())
-  userId         String?
-  user           User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   goalId         String
   goal           Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
   title          String
@@ -112,8 +112,8 @@ model Task {
 
 model Review {
   id          String   @id @default(cuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   goalId      String?
   goal        Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
   type        String   @default("GOAL_WEEKLY")

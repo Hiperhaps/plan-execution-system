@@ -231,6 +231,9 @@ export async function getGoalCompletionReviewData(
     where: { id: goalId, userId },
     include: {
       tasks: {
+        where: {
+          userId,
+        },
         orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       },
       reviews: {

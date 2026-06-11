@@ -8,8 +8,9 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   providers: [
     GitHub({
-      clientId: process.env.AUTH_GITHUB_ID ?? "",
-      clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
+      clientId: process.env.GITHUB_ID ?? process.env.AUTH_GITHUB_ID ?? "",
+      clientSecret:
+        process.env.GITHUB_SECRET ?? process.env.AUTH_GITHUB_SECRET ?? "",
     }),
   ],
   session: {

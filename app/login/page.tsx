@@ -1,3 +1,7 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { GitHubSignInButton } from "./github-sign-in-button";
+
 type LoginPageProps = {
   searchParams: Promise<{
     callbackUrl?: string;
@@ -17,10 +21,13 @@ function normalizeCallbackUrl(value?: string) {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const session = await auth();
+
+  if (session?.user) {
+    redirect("/");
+  }
+
   const callbackUrl = normalizeCallbackUrl((await searchParams).callbackUrl);
-  const signInHref = `/api/auth/signin/github?callbackUrl=${encodeURIComponent(
-    callbackUrl,
-  )}`;
 
   return (
     <main className="login-shell">
@@ -35,9 +42,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </p>
 
         <div className="mt-8">
-          <a href={signInHref} className="btn-primary login-button">
-            使用 GitHub 登录
-          </a>
+          <GitHubSignInButton callbackUrl={callbackUrl} />
         </div>
       </section>
     </main>
