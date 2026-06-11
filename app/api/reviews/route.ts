@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { saveReviewSchema } from "@/lib/validators";
 import {
   createReview,
@@ -9,7 +10,8 @@ import {
 
 export async function GET() {
   try {
-    const reviews = await listReviews();
+    const userId = await requireApiUserId();
+    const reviews = await listReviews(userId);
 
     return NextResponse.json({
       data: reviews,
@@ -21,6 +23,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const userId = await requireApiUserId();
     const body = await request.json();
     const input = saveReviewSchema.parse(body);
     if (input.type === "GOAL_COMPLETION" && !input.goalId) {
@@ -37,6 +40,7 @@ export async function POST(request: Request) {
     const review = await createReview({
       blockers: input.blockers,
       goalId: input.goalId,
+      userId,
       content: input.content,
       nextActions: input.nextActions,
       periodEnd: input.periodEnd ?? undefined,
@@ -57,7 +61,8 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const result = await deleteAllReviews();
+    const userId = await requireApiUserId();
+    const result = await deleteAllReviews(userId);
 
     return NextResponse.json({
       data: {

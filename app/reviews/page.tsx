@@ -1,12 +1,17 @@
 import { ReviewWorkspace } from "@/components/reviews/review-workspace";
 import { BackLink } from "@/components/ui/back-link";
+import { requirePageUserId } from "@/lib/page-auth";
 import { listGoals } from "@/services/goal.service";
 import { listReviews } from "@/services/review.service";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewsPage() {
-  const [goals, reviews] = await Promise.all([listGoals(), listReviews()]);
+  const userId = await requirePageUserId();
+  const [goals, reviews] = await Promise.all([
+    listGoals(userId),
+    listReviews(userId),
+  ]);
 
   return (
     <main className="app-shell page-frame">

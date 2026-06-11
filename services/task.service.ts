@@ -4,6 +4,7 @@ import {
   getDayRange,
   getUpcomingRange,
 } from "@/lib/dates";
+import { ResourceNotFoundError } from "@/lib/resource-errors";
 import type { TaskPriority, TaskStatus } from "@/lib/task-options";
 
 type CreateTaskInput = {
@@ -31,15 +32,16 @@ type UpdateTaskInput = {
   order?: number;
 };
 
-export function listTasksByGoal(goalId: string) {
+export function listTasksByGoal(userId: string, goalId: string) {
   return prisma.task.findMany({
-    where: { goalId },
+    where: { goalId, userId },
     orderBy: [{ order: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
   });
 }
 
-export function listAllTasks() {
+export function listAllTasks(userId: string) {
   return prisma.task.findMany({
+    where: { userId },
     include: {
       goal: true,
     },
@@ -47,11 +49,12 @@ export function listAllTasks() {
   });
 }
 
-export function listTodayTasks(now = new Date()) {
+export function listTodayTasks(userId: string, now = new Date()) {
   const { start, end } = getDayRange(now);
 
   return prisma.task.findMany({
     where: {
+      userId,
       dueDate: {
         gte: start,
         lte: end,
@@ -67,12 +70,13 @@ export function listTodayTasks(now = new Date()) {
   });
 }
 
-export function listOverdueTasks(now = new Date()) {
+export function listOverdueTasks(userId: string, now = new Date()) {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
 
   return prisma.task.findMany({
     where: {
+      userId,
       dueDate: {
         lt: today,
       },
@@ -87,11 +91,12 @@ export function listOverdueTasks(now = new Date()) {
   });
 }
 
-export function listUpcomingTasks(now = new Date()) {
+export function listUpcomingTasks(userId: string, now = new Date()) {
   const { start, end } = getUpcomingRange(3, now);
 
   return prisma.task.findMany({
     where: {
+      userId,
       dueDate: {
         gte: start,
         lte: end,
@@ -107,9 +112,10 @@ export function listUpcomingTasks(now = new Date()) {
   });
 }
 
-export function listInProgressTasks() {
+export function listInProgressTasks(userId: string) {
   return prisma.task.findMany({
     where: {
+      userId,
       status: "IN_PROGRESS",
     },
     include: {
@@ -119,11 +125,12 @@ export function listInProgressTasks() {
   });
 }
 
-export function listThisWeekTasks(now = new Date()) {
+export function listThisWeekTasks(userId: string, now = new Date()) {
   const { start, end } = getCurrentWeekRange(now);
 
   return prisma.task.findMany({
     where: {
+      userId,
       dueDate: {
         gte: start,
         lte: end,
@@ -136,38 +143,61 @@ export function listThisWeekTasks(now = new Date()) {
   });
 }
 
-export function getTaskById(id: string) {
-  return prisma.task.findUnique({
-    where: { id },
+export function getTaskById(userId: string, id: string) {
+  return prisma.task.findFirst({
+    where: { id, userId },
   });
 }
 
-export function createTask(data: CreateTaskInput) {
+export async function createTask(userId: string, data: CreateTaskInput) {
   const { goalId, ...taskData } = data;
+  const goal = await prisma.goal.findFirst({
+    where: { id: goalId, userId },
+    select: { id: true },
+  });
+
+  if (!goal) {
+    throw new ResourceNotFoundError("目标不存在");
+  }
 
   return prisma.task.create({
     data: {
       ...taskData,
+      userId,
+      goalId,
       status: taskData.status ?? "TODO",
       priority: taskData.priority ?? "MEDIUM",
-      goal: {
-        connect: {
-          id: goalId,
-        },
-      },
     },
   });
 }
 
-export function updateTask(id: string, data: UpdateTaskInput) {
-  return prisma.task.update({
-    where: { id },
+export async function updateTask(
+  userId: string,
+  id: string,
+  data: UpdateTaskInput,
+) {
+  const result = await prisma.task.updateMany({
+    where: { id, userId },
     data,
+  });
+
+  if (result.count === 0) {
+    throw new ResourceNotFoundError("任务不存在");
+  }
+
+  return prisma.task.findFirstOrThrow({
+    where: { id, userId },
   });
 }
 
-export function deleteTask(id: string) {
-  return prisma.task.delete({
-    where: { id },
+export async function deleteTask(userId: string, id: string) {
+  const result = await prisma.task.deleteMany({
+    where: { id, userId },
   });
+
+  if (result.count === 0) {
+    throw new ResourceNotFoundError("任务不存在");
+  }
+
+  return result;
 }

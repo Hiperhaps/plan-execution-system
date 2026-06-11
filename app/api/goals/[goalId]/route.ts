@@ -3,6 +3,7 @@ import {
   handleApiError,
   notFoundResponse,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { updateGoalSchema } from "@/lib/validators";
 import {
   deleteGoal,
@@ -18,8 +19,9 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { goalId } = await context.params;
-    const goal = await getGoalById(goalId);
+    const goal = await getGoalById(userId, goalId);
 
     if (!goal) {
       return notFoundResponse("目标不存在");
@@ -35,10 +37,11 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { goalId } = await context.params;
     const body = await request.json();
     const input = updateGoalSchema.parse(body);
-    const goal = await updateGoal(goalId, {
+    const goal = await updateGoal(userId, goalId, {
       ...input,
       description:
         typeof input.description === "string"
@@ -59,8 +62,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { goalId } = await context.params;
-    await deleteGoal(goalId);
+    await deleteGoal(userId, goalId);
 
     return NextResponse.json({
       data: { id: goalId },

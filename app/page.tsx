@@ -1,5 +1,6 @@
 import { Dashboard } from "@/components/dashboard/dashboard";
 import type { DashboardTaskItem } from "@/components/dashboard/types";
+import { requirePageUserId } from "@/lib/page-auth";
 import { resolveEstimatedHours } from "@/lib/task-estimate";
 import { listGoalProgress } from "@/services/goal.service";
 import {
@@ -58,6 +59,7 @@ function toDashboardTask(
 }
 
 export default async function Home() {
+  const userId = await requirePageUserId();
   const [
     todayTasks,
     overdueTasks,
@@ -66,12 +68,12 @@ export default async function Home() {
     weekTasks,
     goalProgress,
   ] = await Promise.all([
-    listTodayTasks(),
-    listOverdueTasks(),
-    listUpcomingTasks(),
-    listInProgressTasks(),
-    listThisWeekTasks(),
-    listGoalProgress(),
+    listTodayTasks(userId),
+    listOverdueTasks(userId),
+    listUpcomingTasks(userId),
+    listInProgressTasks(userId),
+    listThisWeekTasks(userId),
+    listGoalProgress(userId),
   ]);
 
   const reminderCount =

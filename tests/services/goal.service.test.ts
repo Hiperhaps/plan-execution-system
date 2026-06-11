@@ -4,10 +4,12 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     goal: {
       create: vi.fn(),
-      delete: vi.fn(),
+      deleteMany: vi.fn(),
+      findFirst: vi.fn(),
+      findFirstOrThrow: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
-      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     task: {
       groupBy: vi.fn(),
@@ -31,6 +33,7 @@ import {
 
 const createdAt = new Date("2026-06-05T08:00:00.000Z");
 const updatedAt = new Date("2026-06-06T08:00:00.000Z");
+const userId = "user-1";
 
 describe("Goal service", () => {
   beforeEach(() => {
@@ -40,9 +43,10 @@ describe("Goal service", () => {
   it("lists goals newest first", async () => {
     prismaMock.goal.findMany.mockResolvedValue([]);
 
-    await listGoals();
+    await listGoals(userId);
 
     expect(prismaMock.goal.findMany).toHaveBeenCalledWith({
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
   });
@@ -50,13 +54,14 @@ describe("Goal service", () => {
   it("creates a goal with ACTIVE as the default status", async () => {
     prismaMock.goal.create.mockResolvedValue({ id: "goal-1" });
 
-    await createGoal({
+    await createGoal(userId, {
       title: "完成 MVP",
       description: null,
     });
 
     expect(prismaMock.goal.create).toHaveBeenCalledWith({
       data: {
+        userId,
         title: "完成 MVP",
         description: null,
         status: "ACTIVE",
@@ -65,23 +70,24 @@ describe("Goal service", () => {
   });
 
   it("forwards get, update, and delete by id", async () => {
-    prismaMock.goal.findUnique.mockResolvedValue(null);
-    prismaMock.goal.update.mockResolvedValue({ id: "goal-1" });
-    prismaMock.goal.delete.mockResolvedValue({ id: "goal-1" });
+    prismaMock.goal.findFirst.mockResolvedValue(null);
+    prismaMock.goal.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.goal.findFirstOrThrow.mockResolvedValue({ id: "goal-1" });
+    prismaMock.goal.deleteMany.mockResolvedValue({ count: 1 });
 
-    await getGoalById("goal-1");
-    await updateGoal("goal-1", { status: "COMPLETED" });
-    await deleteGoal("goal-1");
+    await getGoalById(userId, "goal-1");
+    await updateGoal(userId, "goal-1", { status: "COMPLETED" });
+    await deleteGoal(userId, "goal-1");
 
-    expect(prismaMock.goal.findUnique).toHaveBeenCalledWith({
-      where: { id: "goal-1" },
+    expect(prismaMock.goal.findFirst).toHaveBeenCalledWith({
+      where: { id: "goal-1", userId },
     });
-    expect(prismaMock.goal.update).toHaveBeenCalledWith({
-      where: { id: "goal-1" },
+    expect(prismaMock.goal.updateMany).toHaveBeenCalledWith({
+      where: { id: "goal-1", userId },
       data: { status: "COMPLETED" },
     });
-    expect(prismaMock.goal.delete).toHaveBeenCalledWith({
-      where: { id: "goal-1" },
+    expect(prismaMock.goal.deleteMany).toHaveBeenCalledWith({
+      where: { id: "goal-1", userId },
     });
   });
 
@@ -93,11 +99,13 @@ describe("Goal service", () => {
       goalWithTasks("goal-empty", "ACTIVE", []),
     ]);
 
-    const result = await listGoalsWithProgress();
+    const result = await listGoalsWithProgress(userId);
 
     expect(prismaMock.goal.findMany).toHaveBeenCalledWith({
+      where: { userId },
       include: {
         tasks: {
+          where: { userId },
           select: {
             status: true,
           },
@@ -147,10 +155,11 @@ describe("Goal service", () => {
       { goalId: "goal-1", status: "TODO", _count: { _all: 1 } },
     ]);
 
-    const result = await listGoalProgress();
+    const result = await listGoalProgress(userId);
 
     expect(prismaMock.task.groupBy).toHaveBeenCalledWith({
       by: ["goalId", "status"],
+      where: { userId },
       _count: {
         _all: true,
       },

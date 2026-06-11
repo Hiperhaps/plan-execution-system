@@ -4,6 +4,7 @@ import {
   notFoundResponse,
   validationErrorResponse,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { weeklyReviewQuerySchema } from "@/lib/validators";
 import { getWeeklyReviewData } from "@/services/review.service";
 
@@ -24,6 +25,7 @@ function toTaskPayload(
 
 export async function GET(request: Request) {
   try {
+    const userId = await requireApiUserId();
     const { searchParams } = new URL(request.url);
     const parsed = weeklyReviewQuerySchema.safeParse({
       goalId: searchParams.get("goalId"),
@@ -35,10 +37,15 @@ export async function GET(request: Request) {
       return validationErrorResponse(parsed.error);
     }
 
-    const data = await getWeeklyReviewData(parsed.data.goalId, new Date(), {
-      start: parsed.data.periodStart ?? undefined,
-      end: parsed.data.periodEnd ?? undefined,
-    });
+    const data = await getWeeklyReviewData(
+      userId,
+      parsed.data.goalId,
+      new Date(),
+      {
+        start: parsed.data.periodStart ?? undefined,
+        end: parsed.data.periodEnd ?? undefined,
+      },
+    );
 
     if (!data) {
       return notFoundResponse("目标不存在");

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { getProjectWeeklyReviewData } from "@/services/review.service";
 
 function toTaskPayload(
@@ -20,7 +21,8 @@ function toTaskPayload(
 
 export async function GET() {
   try {
-    const data = await getProjectWeeklyReviewData();
+    const userId = await requireApiUserId();
+    const data = await getProjectWeeklyReviewData(userId);
 
     return NextResponse.json({
       data: {

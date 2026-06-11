@@ -4,6 +4,7 @@ import {
   notFoundResponse,
   validationErrorResponse,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { reviewGoalSchema } from "@/lib/validators";
 import { getGoalCompletionReviewData } from "@/services/review.service";
 
@@ -24,6 +25,7 @@ function toTaskPayload(
 
 export async function GET(request: Request) {
   try {
+    const userId = await requireApiUserId();
     const { searchParams } = new URL(request.url);
     const parsed = reviewGoalSchema.safeParse({
       goalId: searchParams.get("goalId"),
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
       return validationErrorResponse(parsed.error);
     }
 
-    const data = await getGoalCompletionReviewData(parsed.data.goalId);
+    const data = await getGoalCompletionReviewData(userId, parsed.data.goalId);
 
     if (!data) {
       return notFoundResponse("目标不存在");

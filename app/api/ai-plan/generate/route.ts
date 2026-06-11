@@ -3,6 +3,7 @@ import {
   handleApiError,
   serverErrorResponse,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import {
   AiPlanFormatError,
   aiPlanInputSchema,
@@ -11,6 +12,7 @@ import {
 
 export async function POST(request: Request) {
   try {
+    await requireApiUserId();
     const body = await request.json();
     const input = aiPlanInputSchema.parse(body);
     const plan = await generatePlanDraft(input);

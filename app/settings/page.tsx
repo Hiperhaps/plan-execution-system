@@ -1,6 +1,9 @@
 import { SettingsPanel } from "@/components/settings/settings-panel";
+import { requirePageUserId } from "@/lib/page-auth";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requirePageUserId();
+
   return (
     <main className="app-shell page-frame">
       <header className="page-hero">

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
@@ -30,7 +32,19 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppFrame({ children }: { children: ReactNode }) {
+type AppFrameUser = {
+  name: string | null;
+  email: string | null;
+  image: string | null;
+};
+
+export function AppFrame({
+  children,
+  user,
+}: {
+  children: ReactNode;
+  user?: AppFrameUser | null;
+}) {
   const pathname = usePathname();
   const [preferences, setPreferences] =
     useState<AppPreferences>(defaultPreferences);
@@ -118,6 +132,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             <span />
             <span />
           </div>
+          {user ? <UserMenu user={user} /> : null}
         </header>
 
         <div className="admin-content">
@@ -125,6 +140,47 @@ export function AppFrame({ children }: { children: ReactNode }) {
           {children}
         </div>
       </div>
+    </div>
+  );
+}
+
+function UserMenu({ user }: { user: AppFrameUser }) {
+  const displayName = user.name ?? user.email ?? "已登录用户";
+  const initials = displayName.slice(0, 1).toUpperCase();
+
+  return (
+    <div className="user-menu">
+      <div className="user-avatar" aria-hidden="true">
+        {user.image ? (
+          <Image
+            src={user.image}
+            alt=""
+            width={32}
+            height={32}
+            unoptimized
+            className="h-full w-full rounded-full object-cover"
+          />
+        ) : (
+          initials
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-extrabold text-[#f7faf7]">
+          {displayName}
+        </p>
+        {user.email ? (
+          <p className="truncate text-xs font-bold text-[#9aa3b5]">
+            {user.email}
+          </p>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        className="btn-ghost compact"
+        onClick={() => signOut({ callbackUrl: "/login" })}
+      >
+        退出
+      </button>
     </div>
   );
 }

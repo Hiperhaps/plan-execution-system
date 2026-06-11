@@ -1,4 +1,5 @@
 import { BackLink } from "@/components/ui/back-link";
+import { requirePageUserId } from "@/lib/page-auth";
 import { TaskOverview } from "@/components/tasks/task-overview";
 import { resolveEstimatedHours } from "@/lib/task-estimate";
 import { listAllTasks } from "@/services/task.service";
@@ -6,7 +7,8 @@ import { listAllTasks } from "@/services/task.service";
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage() {
-  const tasks = await listAllTasks();
+  const userId = await requirePageUserId();
+  const tasks = await listAllTasks(userId);
   const totalHours = tasks.reduce(
     (sum, task) =>
       sum + (resolveEstimatedHours(task.estimatedHours, task.description) ?? 0),

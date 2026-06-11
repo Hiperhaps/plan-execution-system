@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import { AuthenticationError } from "@/lib/auth-errors";
+import { ResourceNotFoundError } from "@/lib/resource-errors";
 
 export function validationErrorResponse(error: ZodError) {
   return NextResponse.json(
@@ -22,6 +24,10 @@ export function badRequestResponse(message = "请求不正确") {
 
 export function serverErrorResponse(message = "服务器错误") {
   return NextResponse.json({ message }, { status: 500 });
+}
+
+export function unauthorizedResponse(message = "请先登录后再继续操作") {
+  return NextResponse.json({ message }, { status: 401 });
 }
 
 export function isRecordNotFound(error: unknown) {
@@ -54,6 +60,14 @@ export function handleApiError(
 
   if (error instanceof SyntaxError) {
     return badRequestResponse("请求体不是合法 JSON");
+  }
+
+  if (error instanceof AuthenticationError) {
+    return unauthorizedResponse(error.message);
+  }
+
+  if (error instanceof ResourceNotFoundError) {
+    return notFoundResponse(notFoundMessage ?? error.message);
   }
 
   if (

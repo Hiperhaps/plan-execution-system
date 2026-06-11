@@ -3,19 +3,21 @@ import {
   badRequestResponse,
   handleApiError,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { createTaskSchema } from "@/lib/validators";
 import { createTask, listTasksByGoal } from "@/services/task.service";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const goalId = searchParams.get("goalId");
-
-  if (!goalId) {
-    return badRequestResponse("缺少 goalId");
-  }
-
   try {
-    const tasks = await listTasksByGoal(goalId);
+    const userId = await requireApiUserId();
+    const { searchParams } = new URL(request.url);
+    const goalId = searchParams.get("goalId");
+
+    if (!goalId) {
+      return badRequestResponse("缺少 goalId");
+    }
+
+    const tasks = await listTasksByGoal(userId, goalId);
 
     return NextResponse.json({
       data: tasks,
@@ -27,9 +29,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = await requireApiUserId();
     const body = await request.json();
     const input = createTaskSchema.parse(body);
-    const task = await createTask({
+    const task = await createTask(userId, {
       goalId: input.goalId,
       title: input.title,
       description: input.description,

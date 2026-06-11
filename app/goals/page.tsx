@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { GoalList } from "@/components/goals/goal-list";
 import { BackLink } from "@/components/ui/back-link";
+import { requirePageUserId } from "@/lib/page-auth";
 import { listGoalsWithProgress } from "@/services/goal.service";
 
 export const dynamic = "force-dynamic";
 
 export default async function GoalsPage() {
-  const goals = await listGoalsWithProgress();
+  const userId = await requirePageUserId();
+  const goals = await listGoalsWithProgress(userId);
   const activeGoals = goals.filter(
     (goal) => goal.displayStatus === "ACTIVE",
   ).length;

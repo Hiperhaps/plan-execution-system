@@ -6,8 +6,13 @@ import {
   listGoals,
   updateGoal,
 } from "@/services/goal.service";
+import { requireApiUserId } from "@/lib/auth-session";
 import * as goalsRoute from "@/app/api/goals/route";
 import * as goalRoute from "@/app/api/goals/[goalId]/route";
+
+vi.mock("@/lib/auth-session", () => ({
+  requireApiUserId: vi.fn(),
+}));
 
 vi.mock("@/services/goal.service", () => ({
   createGoal: vi.fn(),
@@ -22,8 +27,10 @@ const mockedDeleteGoal = vi.mocked(deleteGoal);
 const mockedGetGoalById = vi.mocked(getGoalById);
 const mockedListGoals = vi.mocked(listGoals);
 const mockedUpdateGoal = vi.mocked(updateGoal);
+const mockedRequireApiUserId = vi.mocked(requireApiUserId);
 
 const now = new Date("2026-06-05T08:00:00.000Z");
+const userId = "user-1";
 
 function jsonRequest(url: string, body: unknown) {
   return new Request(url, {
@@ -44,12 +51,14 @@ function routeContext(goalId: string) {
 describe("Goal API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedRequireApiUserId.mockResolvedValue(userId);
   });
 
   it("lists goals", async () => {
     const goals = [
       {
         id: "goal-1",
+        userId,
         title: "完成 MVP",
         description: null,
         status: "ACTIVE",
@@ -66,12 +75,13 @@ describe("Goal API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: goals.map(serializeDates) });
-    expect(mockedListGoals).toHaveBeenCalledOnce();
+    expect(mockedListGoals).toHaveBeenCalledWith(userId);
   });
 
   it("creates a goal", async () => {
     const goal = {
       id: "goal-1",
+      userId,
       title: "完成 MVP",
       description: null,
       status: "ACTIVE",
@@ -92,7 +102,7 @@ describe("Goal API", () => {
 
     expect(response.status).toBe(201);
     expect(payload).toEqual({ data: serializeDates(goal) });
-    expect(mockedCreateGoal).toHaveBeenCalledWith({
+    expect(mockedCreateGoal).toHaveBeenCalledWith(userId, {
       title: "完成 MVP",
       description: null,
       status: "ACTIVE",
@@ -116,6 +126,7 @@ describe("Goal API", () => {
   it("returns a single goal", async () => {
     const goal = {
       id: "goal-1",
+      userId,
       title: "完成 MVP",
       description: "基础版本",
       status: "ACTIVE",
@@ -134,7 +145,7 @@ describe("Goal API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: serializeDates(goal) });
-    expect(mockedGetGoalById).toHaveBeenCalledWith("goal-1");
+    expect(mockedGetGoalById).toHaveBeenCalledWith(userId, "goal-1");
   });
 
   it("returns 404 when a goal does not exist", async () => {
@@ -153,6 +164,7 @@ describe("Goal API", () => {
   it("updates a goal", async () => {
     const goal = {
       id: "goal-1",
+      userId,
       title: "完成 MVP v2",
       description: null,
       status: "COMPLETED",
@@ -175,7 +187,7 @@ describe("Goal API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: serializeDates(goal) });
-    expect(mockedUpdateGoal).toHaveBeenCalledWith("goal-1", {
+    expect(mockedUpdateGoal).toHaveBeenCalledWith(userId, "goal-1", {
       title: "完成 MVP v2",
       description: null,
       status: "COMPLETED",
@@ -183,16 +195,7 @@ describe("Goal API", () => {
   });
 
   it("deletes a goal", async () => {
-    mockedDeleteGoal.mockResolvedValue({
-      id: "goal-1",
-      title: "完成 MVP",
-      description: null,
-      status: "ACTIVE",
-      startDate: null,
-      targetDate: null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    mockedDeleteGoal.mockResolvedValue({ count: 1 });
 
     const response = await goalRoute.DELETE(
       new Request("http://localhost/api/goals/goal-1"),
@@ -202,7 +205,7 @@ describe("Goal API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: { id: "goal-1" } });
-    expect(mockedDeleteGoal).toHaveBeenCalledWith("goal-1");
+    expect(mockedDeleteGoal).toHaveBeenCalledWith(userId, "goal-1");
   });
 });
 

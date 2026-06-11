@@ -1,7 +1,10 @@
 import { AiPlanForm } from "@/components/ai-plan/ai-plan-form";
 import { BackLink } from "@/components/ui/back-link";
+import { requirePageUserId } from "@/lib/page-auth";
 
-export default function AiPlanPage() {
+export default async function AiPlanPage() {
+  await requirePageUserId();
+
   return (
     <main className="app-shell page-frame">
       <BackLink href="/" label="返回首页" />

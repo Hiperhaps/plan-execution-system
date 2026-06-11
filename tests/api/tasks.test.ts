@@ -6,8 +6,13 @@ import {
   listTasksByGoal,
   updateTask,
 } from "@/services/task.service";
+import { requireApiUserId } from "@/lib/auth-session";
 import * as tasksRoute from "@/app/api/tasks/route";
 import * as taskRoute from "@/app/api/tasks/[taskId]/route";
+
+vi.mock("@/lib/auth-session", () => ({
+  requireApiUserId: vi.fn(),
+}));
 
 vi.mock("@/services/task.service", () => ({
   createTask: vi.fn(),
@@ -22,9 +27,11 @@ const mockedDeleteTask = vi.mocked(deleteTask);
 const mockedGetTaskById = vi.mocked(getTaskById);
 const mockedListTasksByGoal = vi.mocked(listTasksByGoal);
 const mockedUpdateTask = vi.mocked(updateTask);
+const mockedRequireApiUserId = vi.mocked(requireApiUserId);
 
 const now = new Date("2026-06-05T08:00:00.000Z");
 const dueDate = new Date("2026-06-10T00:00:00.000Z");
+const userId = "user-1";
 
 function jsonRequest(url: string, body: unknown) {
   return new Request(url, {
@@ -45,6 +52,7 @@ function routeContext(taskId: string) {
 describe("Task API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedRequireApiUserId.mockResolvedValue(userId);
   });
 
   it("requires goalId when listing tasks", async () => {
@@ -62,6 +70,7 @@ describe("Task API", () => {
     const tasks = [
       {
         id: "task-1",
+        userId,
         goalId: "goal-1",
         title: "设计数据模型",
         description: null,
@@ -85,12 +94,13 @@ describe("Task API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: tasks.map(serializeDates) });
-    expect(mockedListTasksByGoal).toHaveBeenCalledWith("goal-1");
+    expect(mockedListTasksByGoal).toHaveBeenCalledWith(userId, "goal-1");
   });
 
   it("creates a task", async () => {
     const task = {
       id: "task-1",
+      userId,
       goalId: "goal-1",
       title: "设计数据模型",
       description: null,
@@ -119,7 +129,7 @@ describe("Task API", () => {
 
     expect(response.status).toBe(201);
     expect(payload).toEqual({ data: serializeDates(task) });
-    expect(mockedCreateTask).toHaveBeenCalledWith({
+    expect(mockedCreateTask).toHaveBeenCalledWith(userId, {
       goalId: "goal-1",
       title: "设计数据模型",
       description: undefined,
@@ -150,6 +160,7 @@ describe("Task API", () => {
   it("returns a single task", async () => {
     const task = {
       id: "task-1",
+      userId,
       goalId: "goal-1",
       title: "设计数据模型",
       description: null,
@@ -173,7 +184,7 @@ describe("Task API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: serializeDates(task) });
-    expect(mockedGetTaskById).toHaveBeenCalledWith("task-1");
+    expect(mockedGetTaskById).toHaveBeenCalledWith(userId, "task-1");
   });
 
   it("returns 404 when a task does not exist", async () => {
@@ -192,6 +203,7 @@ describe("Task API", () => {
   it("updates a task and sets completedAt when marked done", async () => {
     const task = {
       id: "task-1",
+      userId,
       goalId: "goal-1",
       title: "设计数据模型",
       description: null,
@@ -217,28 +229,14 @@ describe("Task API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: serializeDates(task) });
-    expect(mockedUpdateTask).toHaveBeenCalledWith("task-1", {
+    expect(mockedUpdateTask).toHaveBeenCalledWith(userId, "task-1", {
       status: "DONE",
       completedAt: expect.any(Date),
     });
   });
 
   it("deletes a task", async () => {
-    mockedDeleteTask.mockResolvedValue({
-      id: "task-1",
-      goalId: "goal-1",
-      title: "设计数据模型",
-      description: null,
-      phase: null,
-      estimatedHours: null,
-      status: "TODO",
-      priority: "HIGH",
-      dueDate,
-      completedAt: null,
-      order: 0,
-      createdAt: now,
-      updatedAt: now,
-    });
+    mockedDeleteTask.mockResolvedValue({ count: 1 });
 
     const response = await taskRoute.DELETE(
       new Request("http://localhost/api/tasks/task-1"),
@@ -248,7 +246,7 @@ describe("Task API", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ data: { id: "task-1" } });
-    expect(mockedDeleteTask).toHaveBeenCalledWith("task-1");
+    expect(mockedDeleteTask).toHaveBeenCalledWith(userId, "task-1");
   });
 });
 

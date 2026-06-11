@@ -268,6 +268,32 @@ textarea {
     background: var(--line-strong);
   }
 
+  .user-menu {
+    display: flex;
+    max-width: min(36vw, 24rem);
+    align-items: center;
+    gap: 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    padding: 0.35rem 0.45rem 0.35rem 0.35rem;
+  }
+
+  .user-avatar {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 900;
+  }
+
   .admin-content {
     min-width: 0;
   }
@@ -509,6 +535,34 @@ textarea {
 
   .btn-danger:hover:not(:disabled) {
     background: #fff1ec;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 800;
+    transition:
+      border-color 160ms ease,
+      color 160ms ease,
+      background 160ms ease;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--line-strong);
+    background: var(--panel-soft);
+    color: var(--ink);
+  }
+
+  .btn-ghost.compact {
+    min-height: 2rem;
+    padding: 0 0.65rem;
   }
 
   .btn-primary:disabled,
@@ -1004,6 +1058,28 @@ textarea {
     padding: 0.75rem 0.9rem;
     font-size: 0.875rem;
     font-weight: 700;
+  }
+
+  .login-shell {
+    display: grid;
+    min-height: calc(100vh - 56px);
+    place-items: center;
+    padding: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  .login-panel {
+    width: min(100%, 42rem);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background:
+      linear-gradient(135deg, var(--panel-bg), var(--panel-soft)),
+      var(--panel-bg);
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  }
+
+  .login-button {
+    min-width: 11rem;
   }
 
   .admin-content .text-\[\#1f2523\] {

@@ -3,15 +3,17 @@ import {
   handleApiError,
   notFoundResponse,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { reviewGoalSchema } from "@/lib/validators";
 import { generateWeeklyReviewSuggestion } from "@/services/ai-review.service";
 import { getWeeklyReviewData } from "@/services/review.service";
 
 export async function POST(request: Request) {
   try {
+    const userId = await requireApiUserId();
     const body = await request.json();
     const input = reviewGoalSchema.parse(body);
-    const data = await getWeeklyReviewData(input.goalId);
+    const data = await getWeeklyReviewData(userId, input.goalId);
 
     if (!data) {
       return notFoundResponse("目标不存在");

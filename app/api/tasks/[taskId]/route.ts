@@ -3,6 +3,7 @@ import {
   handleApiError,
   notFoundResponse,
 } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { updateTaskSchema } from "@/lib/validators";
 import {
   deleteTask,
@@ -18,8 +19,9 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { taskId } = await context.params;
-    const task = await getTaskById(taskId);
+    const task = await getTaskById(userId, taskId);
 
     if (!task) {
       return notFoundResponse("任务不存在");
@@ -35,6 +37,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { taskId } = await context.params;
     const body = await request.json();
     const input = updateTaskSchema.parse(body);
@@ -44,7 +47,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         : input.status
           ? null
           : undefined;
-    const task = await updateTask(taskId, {
+    const task = await updateTask(userId, taskId, {
       ...input,
       completedAt,
     });
@@ -62,8 +65,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { taskId } = await context.params;
-    await deleteTask(taskId);
+    await deleteTask(userId, taskId);
 
     return NextResponse.json({
       data: { id: taskId },

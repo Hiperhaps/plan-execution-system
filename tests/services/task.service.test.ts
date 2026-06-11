@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
+    goal: {
+      findFirst: vi.fn(),
+    },
     task: {
       create: vi.fn(),
-      delete: vi.fn(),
+      deleteMany: vi.fn(),
+      findFirst: vi.fn(),
+      findFirstOrThrow: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
-      update: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
 }));
@@ -31,6 +36,8 @@ import {
 } from "@/services/task.service";
 
 describe("Task service", () => {
+  const userId = "user-1";
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -38,10 +45,10 @@ describe("Task service", () => {
   it("lists tasks by goal in stable execution order", async () => {
     prismaMock.task.findMany.mockResolvedValue([]);
 
-    await listTasksByGoal("goal-1");
+    await listTasksByGoal(userId, "goal-1");
 
     expect(prismaMock.task.findMany).toHaveBeenCalledWith({
-      where: { goalId: "goal-1" },
+      where: { goalId: "goal-1", userId },
       orderBy: [{ order: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
     });
   });
@@ -49,9 +56,10 @@ describe("Task service", () => {
   it("lists all tasks with goal context", async () => {
     prismaMock.task.findMany.mockResolvedValue([]);
 
-    await listAllTasks();
+    await listAllTasks(userId);
 
     expect(prismaMock.task.findMany).toHaveBeenCalledWith({
+      where: { userId },
       include: {
         goal: true,
       },
@@ -63,10 +71,11 @@ describe("Task service", () => {
     prismaMock.task.findMany.mockResolvedValue([]);
     const now = new Date("2026-06-10T12:30:00.000Z");
 
-    await listTodayTasks(now);
+    await listTodayTasks(userId, now);
 
     expect(prismaMock.task.findMany).toHaveBeenCalledWith({
       where: {
+        userId,
         dueDate: {
           gte: new Date(2026, 5, 10, 0, 0, 0, 0),
           lte: new Date(2026, 5, 10, 23, 59, 59, 999),
@@ -85,10 +94,11 @@ describe("Task service", () => {
   it("queries overdue unfinished tasks before today", async () => {
     prismaMock.task.findMany.mockResolvedValue([]);
 
-    await listOverdueTasks(new Date("2026-06-10T12:30:00.000Z"));
+    await listOverdueTasks(userId, new Date("2026-06-10T12:30:00.000Z"));
 
     expect(prismaMock.task.findMany).toHaveBeenCalledWith({
       where: {
+        userId,
         dueDate: {
           lt: new Date(2026, 5, 10, 0, 0, 0, 0),
         },
@@ -106,10 +116,11 @@ describe("Task service", () => {
   it("queries upcoming unfinished tasks starting tomorrow", async () => {
     prismaMock.task.findMany.mockResolvedValue([]);
 
-    await listUpcomingTasks(new Date("2026-06-10T12:30:00.000Z"));
+    await listUpcomingTasks(userId, new Date("2026-06-10T12:30:00.000Z"));
 
     expect(prismaMock.task.findMany).toHaveBeenCalledWith({
       where: {
+        userId,
         dueDate: {
           gte: new Date(2026, 5, 11, 0, 0, 0, 0),
           lte: new Date(2026, 5, 13, 23, 59, 59, 999),
@@ -129,11 +140,12 @@ describe("Task service", () => {
     prismaMock.task.findMany.mockResolvedValue([]);
     const now = new Date("2026-06-10T12:30:00.000Z");
 
-    await listInProgressTasks();
-    await listThisWeekTasks(now);
+    await listInProgressTasks(userId);
+    await listThisWeekTasks(userId, now);
 
     expect(prismaMock.task.findMany).toHaveBeenNthCalledWith(1, {
       where: {
+        userId,
         status: "IN_PROGRESS",
       },
       include: {
@@ -143,6 +155,7 @@ describe("Task service", () => {
     });
     expect(prismaMock.task.findMany).toHaveBeenNthCalledWith(2, {
       where: {
+        userId,
         dueDate: {
           gte: new Date(2026, 5, 8, 0, 0, 0, 0),
           lte: new Date(2026, 5, 14, 23, 59, 59, 999),
@@ -157,8 +170,9 @@ describe("Task service", () => {
 
   it("creates tasks with default status and priority", async () => {
     prismaMock.task.create.mockResolvedValue({ id: "task-1" });
+    prismaMock.goal.findFirst.mockResolvedValue({ id: "goal-1" });
 
-    await createTask({
+    await createTask(userId, {
       goalId: "goal-1",
       title: "设计数据模型",
       description: null,
@@ -166,37 +180,35 @@ describe("Task service", () => {
 
     expect(prismaMock.task.create).toHaveBeenCalledWith({
       data: {
+        userId,
+        goalId: "goal-1",
         title: "设计数据模型",
         description: null,
         status: "TODO",
         priority: "MEDIUM",
-        goal: {
-          connect: {
-            id: "goal-1",
-          },
-        },
       },
     });
   });
 
   it("forwards get, update, and delete by id", async () => {
-    prismaMock.task.findUnique.mockResolvedValue(null);
-    prismaMock.task.update.mockResolvedValue({ id: "task-1" });
-    prismaMock.task.delete.mockResolvedValue({ id: "task-1" });
+    prismaMock.task.findFirst.mockResolvedValue(null);
+    prismaMock.task.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.task.findFirstOrThrow.mockResolvedValue({ id: "task-1" });
+    prismaMock.task.deleteMany.mockResolvedValue({ count: 1 });
 
-    await getTaskById("task-1");
-    await updateTask("task-1", { status: "DONE" });
-    await deleteTask("task-1");
+    await getTaskById(userId, "task-1");
+    await updateTask(userId, "task-1", { status: "DONE" });
+    await deleteTask(userId, "task-1");
 
-    expect(prismaMock.task.findUnique).toHaveBeenCalledWith({
-      where: { id: "task-1" },
+    expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+      where: { id: "task-1", userId },
     });
-    expect(prismaMock.task.update).toHaveBeenCalledWith({
-      where: { id: "task-1" },
+    expect(prismaMock.task.updateMany).toHaveBeenCalledWith({
+      where: { id: "task-1", userId },
       data: { status: "DONE" },
     });
-    expect(prismaMock.task.delete).toHaveBeenCalledWith({
-      where: { id: "task-1" },
+    expect(prismaMock.task.deleteMany).toHaveBeenCalledWith({
+      where: { id: "task-1", userId },
     });
   });
 });

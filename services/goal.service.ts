@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { GoalStatus } from "@/lib/goal-options";
+import { ResourceNotFoundError } from "@/lib/resource-errors";
 
 type CreateGoalInput = {
   title: string;
@@ -17,16 +18,19 @@ type UpdateGoalInput = {
   targetDate?: Date | null;
 };
 
-export function listGoals() {
+export function listGoals(userId: string) {
   return prisma.goal.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function listGoalsWithProgress() {
+export async function listGoalsWithProgress(userId: string) {
   const goals = await prisma.goal.findMany({
+    where: { userId },
     include: {
       tasks: {
+        where: { userId },
         select: {
           status: true,
         },
@@ -66,37 +70,57 @@ export async function listGoalsWithProgress() {
   });
 }
 
-export function getGoalById(id: string) {
-  return prisma.goal.findUnique({
-    where: { id },
+export function getGoalById(userId: string, id: string) {
+  return prisma.goal.findFirst({
+    where: { id, userId },
   });
 }
 
-export function createGoal(data: CreateGoalInput) {
+export function createGoal(userId: string, data: CreateGoalInput) {
   return prisma.goal.create({
     data: {
       ...data,
+      userId,
       status: data.status ?? "ACTIVE",
     },
   });
 }
 
-export function updateGoal(id: string, data: UpdateGoalInput) {
-  return prisma.goal.update({
-    where: { id },
+export async function updateGoal(
+  userId: string,
+  id: string,
+  data: UpdateGoalInput,
+) {
+  const result = await prisma.goal.updateMany({
+    where: { id, userId },
     data,
   });
-}
 
-export function deleteGoal(id: string) {
-  return prisma.goal.delete({
-    where: { id },
+  if (result.count === 0) {
+    throw new ResourceNotFoundError("目标不存在");
+  }
+
+  return prisma.goal.findFirstOrThrow({
+    where: { id, userId },
   });
 }
 
-export async function listGoalProgress() {
+export async function deleteGoal(userId: string, id: string) {
+  const result = await prisma.goal.deleteMany({
+    where: { id, userId },
+  });
+
+  if (result.count === 0) {
+    throw new ResourceNotFoundError("目标不存在");
+  }
+
+  return result;
+}
+
+export async function listGoalProgress(userId: string) {
   const [goals, taskCounts] = await Promise.all([
     prisma.goal.findMany({
+      where: { userId },
       select: {
         id: true,
         title: true,
@@ -106,6 +130,7 @@ export async function listGoalProgress() {
     }),
     prisma.task.groupBy({
       by: ["goalId", "status"],
+      where: { userId },
       _count: {
         _all: true,
       },

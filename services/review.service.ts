@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentWeekRange } from "@/lib/dates";
+import { ResourceNotFoundError } from "@/lib/resource-errors";
 import type { ReviewType } from "@/lib/review-options";
 
 type ReviewPeriod = {
@@ -66,8 +67,9 @@ function classifyTasks<
   };
 }
 
-export function listReviews() {
+export function listReviews(userId: string) {
   return prisma.review.findMany({
+    where: { userId },
     include: {
       goal: true,
     },
@@ -76,6 +78,7 @@ export function listReviews() {
 }
 
 export async function getWeeklyReviewData(
+  userId: string,
   goalId: string,
   now = new Date(),
   customPeriod?: Partial<ReviewPeriod>,
@@ -86,11 +89,12 @@ export async function getWeeklyReviewData(
       ? normalizePeriod(customPeriod.start, customPeriod.end)
       : normalizePeriod(currentWeek.start, currentWeek.end);
 
-  const goal = await prisma.goal.findUnique({
-    where: { id: goalId },
+  const goal = await prisma.goal.findFirst({
+    where: { id: goalId, userId },
     include: {
       tasks: {
         where: {
+          userId,
           OR: [
             {
               dueDate: {
@@ -116,6 +120,7 @@ export async function getWeeklyReviewData(
       },
       reviews: {
         where: {
+          userId,
           type: "GOAL_WEEKLY",
           periodStart: start,
           periodEnd: end,
@@ -151,12 +156,16 @@ export async function getWeeklyReviewData(
   };
 }
 
-export async function getProjectWeeklyReviewData(now = new Date()) {
+export async function getProjectWeeklyReviewData(
+  userId: string,
+  now = new Date(),
+) {
   const currentWeek = getCurrentWeekRange(now);
   const { start, end } = normalizePeriod(currentWeek.start, currentWeek.end);
   const [tasks, latestReview] = await Promise.all([
     prisma.task.findMany({
       where: {
+        userId,
         OR: [
           {
             dueDate: {
@@ -184,6 +193,7 @@ export async function getProjectWeeklyReviewData(now = new Date()) {
     }),
     prisma.review.findFirst({
       where: {
+        userId,
         goalId: null,
         type: "PROJECT_WEEKLY",
         periodStart: start,
@@ -213,17 +223,19 @@ export async function getProjectWeeklyReviewData(now = new Date()) {
 }
 
 export async function getGoalCompletionReviewData(
+  userId: string,
   goalId: string,
   now = new Date(),
 ) {
-  const goal = await prisma.goal.findUnique({
-    where: { id: goalId },
+  const goal = await prisma.goal.findFirst({
+    where: { id: goalId, userId },
     include: {
       tasks: {
         orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       },
       reviews: {
         where: {
+          userId,
           type: "GOAL_COMPLETION",
         },
         orderBy: { createdAt: "desc" },
@@ -263,6 +275,7 @@ export async function getGoalCompletionReviewData(
 export async function createReview({
   blockers,
   goalId,
+  userId,
   nextActions,
   content,
   periodEnd: inputPeriodEnd,
@@ -274,6 +287,7 @@ export async function createReview({
 }: {
   blockers?: string | null;
   goalId?: string | null;
+  userId: string;
   nextActions?: string | null;
   content?: string;
   periodEnd?: Date;
@@ -287,9 +301,19 @@ export async function createReview({
   const reviewGoalId = goalId ?? null;
   const reviewType =
     type ?? (reviewGoalId ? "GOAL_WEEKLY" : "PROJECT_WEEKLY");
+  const targetGoal = reviewGoalId
+    ? await prisma.goal.findFirst({
+        where: { id: reviewGoalId, userId },
+      })
+    : null;
+
+  if (reviewGoalId && !targetGoal) {
+    throw new ResourceNotFoundError("目标不存在");
+  }
+
   const completionGoal =
     reviewType === "GOAL_COMPLETION" && reviewGoalId
-      ? await prisma.goal.findUniqueOrThrow({ where: { id: reviewGoalId } })
+      ? targetGoal
       : null;
   const defaultPeriodStart =
     completionGoal?.startDate ?? completionGoal?.createdAt ?? currentWeek.start;
@@ -302,6 +326,7 @@ export async function createReview({
   const reviewSummary = summary ?? content ?? "";
   const existingReview = await prisma.review.findFirst({
     where: {
+      userId,
       goalId: reviewGoalId,
       type: reviewType,
       ...(reviewType === "GOAL_COMPLETION"
@@ -334,6 +359,7 @@ export async function createReview({
 
   return prisma.review.create({
     data: {
+      userId,
       goalId: reviewGoalId,
       type: reviewType,
       periodStart,
@@ -346,12 +372,20 @@ export async function createReview({
   });
 }
 
-export function deleteReview(id: string) {
-  return prisma.review.delete({
-    where: { id },
+export async function deleteReview(userId: string, id: string) {
+  const result = await prisma.review.deleteMany({
+    where: { id, userId },
   });
+
+  if (result.count === 0) {
+    throw new ResourceNotFoundError("复盘记录不存在");
+  }
+
+  return result;
 }
 
-export function deleteAllReviews() {
-  return prisma.review.deleteMany();
+export function deleteAllReviews(userId: string) {
+  return prisma.review.deleteMany({
+    where: { userId },
+  });
 }

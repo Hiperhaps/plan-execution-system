@@ -1,0 +1,12 @@
+import { redirect } from "next/navigation";
+import { getCurrentUserId } from "@/lib/auth-session";
+
+export async function requirePageUserId() {
+  const userId = await getCurrentUserId();
+
+  if (!userId) {
+    redirect("/login");
+  }
+
+  return userId;
+}

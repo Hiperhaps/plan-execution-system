@@ -3,6 +3,7 @@ import { TaskManager } from "@/components/tasks/task-manager";
 import type { TaskItem } from "@/components/tasks/types";
 import { BackLink } from "@/components/ui/back-link";
 import { getGoalStatusLabel } from "@/lib/goal-options";
+import { requirePageUserId } from "@/lib/page-auth";
 import { resolveEstimatedHours } from "@/lib/task-estimate";
 import { getGoalById } from "@/services/goal.service";
 import { listTasksByGoal } from "@/services/task.service";
@@ -30,10 +31,11 @@ function toTaskItem(task: Awaited<ReturnType<typeof listTasksByGoal>>[number]) {
 }
 
 export default async function GoalDetailPage({ params }: GoalDetailPageProps) {
+  const userId = await requirePageUserId();
   const { goalId } = await params;
   const [goal, tasks] = await Promise.all([
-    getGoalById(goalId),
-    listTasksByGoal(goalId),
+    getGoalById(userId, goalId),
+    listTasksByGoal(userId, goalId),
   ]);
 
   if (!goal) {

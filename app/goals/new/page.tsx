@@ -1,7 +1,10 @@
 import { GoalForm } from "@/components/goals/goal-form";
 import { BackLink } from "@/components/ui/back-link";
+import { requirePageUserId } from "@/lib/page-auth";
 
-export default function NewGoalPage() {
+export default async function NewGoalPage() {
+  await requirePageUserId();
+
   return (
     <main className="app-shell page-frame">
       <BackLink href="/goals" label="返回目标列表" />

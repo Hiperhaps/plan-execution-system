@@ -156,9 +156,10 @@ export async function generatePlanDraft(
   return parseGeneratedPlan(content);
 }
 
-export async function saveGeneratedPlan(plan: GeneratedPlan) {
+export async function saveGeneratedPlan(userId: string, plan: GeneratedPlan) {
   return prisma.goal.create({
     data: {
+      userId,
       title: plan.goalTitle,
       description: plan.goalDescription || null,
       status: "ACTIVE",
@@ -166,6 +167,7 @@ export async function saveGeneratedPlan(plan: GeneratedPlan) {
       tasks: {
         create: plan.phases.flatMap((phase, phaseIndex) =>
           phase.tasks.map((task, taskIndex) => ({
+            userId,
             title: task.title,
             description: buildTaskDescription(task),
             phase: phase.title,

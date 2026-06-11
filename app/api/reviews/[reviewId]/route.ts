@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/lib/api-response";
+import { requireApiUserId } from "@/lib/auth-session";
 import { deleteReview } from "@/services/review.service";
 
 type RouteContext = {
@@ -10,8 +11,9 @@ type RouteContext = {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
+    const userId = await requireApiUserId();
     const { reviewId } = await context.params;
-    await deleteReview(reviewId);
+    await deleteReview(userId, reviewId);
 
     return NextResponse.json({
       data: {
